@@ -1,0 +1,38 @@
+{
+	"info": {
+		"_postman_id": "98845b28-3225-421a-845f-ef1cae31ea6c",
+		"name": "Code Generator",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "10044795"
+	},
+	"item": [
+		{
+			"name": "Generate Pet Store",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"swaggerFilePath\": \"petstore.json\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/generate",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"generate"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
