@@ -1,58 +1,62 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const swaggerParser = require('swagger-parser');
-const fs = require('fs');
-const path = require('path');
-const mkdirp = require('mkdirp');
-const config = require('./resources/config');
-const Sequelize = require('sequelize');
-const { generateModels, generateRoutes, generateControllers } = require('./codeGenerator');
+#!/usr/bin/env node
 
-const app = express();
-const port = 3000;
-const newAppPath = 'api-generated';
+const yargs = require("yargs");
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+const { parseSwagger, generateCode } = require("./codeGenerator");
 
-// Middleware
-app.use(bodyParser.json());
+// Define the command-line options
+const argv = yargs
+  .usage("Usage: $0 --url [swagger_url] --config [config_path]")
+  .option("url", {
+    alias: "u",
+    describe: "URL of the OpenAPI/Swagger file",
+    demandOption: true,
+    type: "string",
+  })
+  .option("config", {
+    alias: "c",
+    describe: "Path to the database config file (optional)",
+    default: "./config.js",
+    type: "string",
+  })
+  .help("h")
+  .alias("h", "help").argv;
 
-// Connect to the database
-const sequelize = new Sequelize(config.db.database, config.db.user, config.db.password, {
-  host: config.db.host,
-  dialect: 'mysql',
-  port: config.db.port
-});
-
-// Swagger file parsing and code generation
-const parseSwagger = async (swaggerFilePath) => {
+// Fetch OpenAPI file from the URL
+const fetchSwaggerFile = async (url) => {
   try {
-    const api = await swaggerParser.dereference(swaggerFilePath);
-    
-    // Generate models, routes, and controllers based on OpenAPI definitions
-    generateModels(api);
-    generateRoutes(api);
-    generateControllers(api);
-    
-    console.log("Code generation complete.");
+    const response = await axios.get(url);
+    return response.data;
   } catch (error) {
-    console.error("Error parsing Swagger file:", error);
+    console.error("Error fetching Swagger file:", error);
+    process.exit(1);
   }
 };
 
-// Endpoint to receive OpenAPI file
-app.post('/generate', (req, res) => {
-   console.log("Received request to generate code from Swagger file:", req.body.swaggerFilePath);
-   const swaggerFilePath = path.join(__dirname, newAppPath, req.body.swaggerFilePath);
-   console.log("Received request to generate code from Swagger file:", swaggerFilePath);
+// Main logic to parse Swagger and generate code
+const main = async () => {
+  const swaggerUrl = argv.url;
+  const configPath = argv.config;
 
-  if (!fs.existsSync(swaggerFilePath)) {
-    return res.status(400).json({ message: 'Swagger file not found' });
+  // Read the database config
+  if (!fs.existsSync(configPath)) {
+    console.error(`Config file not found at ${configPath}`);
+    process.exit(1);
   }
+  const config = require(configPath);
 
-  parseSwagger(swaggerFilePath)
-    .then(() => res.status(200).json({ message: 'API code generated successfully' }))
-    .catch((err) => res.status(500).json({ message: 'Failed to generate API code', error: err.message }));
-});
+  console.log("Fetching Swagger file from:", swaggerUrl);
+  const swaggerFile = await fetchSwaggerFile(swaggerUrl);
 
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-});
+  console.log("Parsing Swagger file...");
+  const api = await parseSwagger(swaggerFile);
+
+  console.log("Generating code...");
+  generateCode(api, config);
+
+  console.log("Code generation complete!");
+};
+
+main();
