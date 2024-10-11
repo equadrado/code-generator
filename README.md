@@ -1,5 +1,7 @@
 Running the Application
 
+Make sure to use Node version 15.0.0 or later
+
 Example command:
 
 node app.js https://raw.githubusercontent.com/OpenAPITools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.yaml javascript ./dist
