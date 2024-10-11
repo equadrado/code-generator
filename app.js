@@ -1,62 +1,53 @@
-#!/usr/bin/env node
-
-const yargs = require("yargs");
-const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
-const { parseSwagger, generateCode } = require("./codeGenerator");
+const { exec } = require("child_process");
+const axios = require("axios");
+const process = require("process");
 
-// Define the command-line options
-const argv = yargs
-  .usage("Usage: $0 --url [swagger_url] --config [config_path]")
-  .option("url", {
-    alias: "u",
-    describe: "URL of the OpenAPI/Swagger file",
-    demandOption: true,
-    type: "string",
-  })
-  .option("config", {
-    alias: "c",
-    describe: "Path to the database config file (optional)",
-    default: "./config.js",
-    type: "string",
-  })
-  .help("h")
-  .alias("h", "help").argv;
+// Read command line arguments
+const args = process.argv.slice(2);
+const swaggerUrl = args[0];
+const language = args[1];
+const outputFolder = args[2];
 
-// Fetch OpenAPI file from the URL
-const fetchSwaggerFile = async (url) => {
+// Ensure required arguments are provided
+if (!swaggerUrl || !language || !outputFolder) {
+  console.error(
+    "Usage: node app.js <swagger-url> <language> <output-folder>"
+  );
+  process.exit(1);
+}
+
+// Supported languages (JavaScript or Java)
+const supportedLanguages = {
+  javascript: "nodejs-express-server",
+  java: "spring",
+};
+
+// Validate the programming language input
+if (!supportedLanguages[language.toLowerCase()]) {
+  console.error("Supported languages are JavaScript and Java");
+  process.exit(1);
+}
+
+(async () => {
   try {
-    const response = await axios.get(url);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching Swagger file:", error);
-    process.exit(1);
+    // Generate server-side code
+    const codegenCommand = `npx openapi-generator-cli generate -g ${
+      supportedLanguages[language.toLowerCase()]
+    } -i ${swaggerUrl} -o ${outputFolder}`;
+    exec(codegenCommand, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error: ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        console.error(`Stderr: ${stderr}`);
+        return;
+      }
+      console.log(`Generated code successfully in ${outputFolder}`);
+    });
+  } catch (err) {
+    console.error("Error:", err);
   }
-};
-
-// Main logic to parse Swagger and generate code
-const main = async () => {
-  const swaggerUrl = argv.url;
-  const configPath = argv.config;
-
-  // Read the database config
-  if (!fs.existsSync(configPath)) {
-    console.error(`Config file not found at ${configPath}`);
-    process.exit(1);
-  }
-  const config = require(configPath);
-
-  console.log("Fetching Swagger file from:", swaggerUrl);
-  const swaggerFile = await fetchSwaggerFile(swaggerUrl);
-
-  console.log("Parsing Swagger file...");
-  const api = await parseSwagger(swaggerFile);
-
-  console.log("Generating code...");
-  generateCode(api, config);
-
-  console.log("Code generation complete!");
-};
-
-main();
+})();

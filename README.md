@@ -1,17 +1,9 @@
 Running the Application
 
-Make the CLI script executable (on Unix-like systems):
-
-chmod +x cli.js
-
-Run the CLI tool:
-
 Example command:
 
-./cli.js --url https://example.com/path/to/swagger.json --config ./config.js
+node app.js https://raw.githubusercontent.com/OpenAPITools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.yaml javascript ./dist
 
-This will:
+It's trowing an error, however getting the command ran by the app and running it directly in the terminal it works perfectly
 
-Fetch the Swagger file from the provided URL.
-Parse the file and generate the models, routes, and controllers.
-Create a MySQL connection using the details provided in config.js.
+npx openapi-generator-cli generate -g nodejs-express-server -i https://raw.githubusercontent.com/OpenAPITools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.yaml -o ./dist
